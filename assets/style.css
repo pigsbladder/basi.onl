@@ -1,0 +1,785 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+/* ── Variables ─────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #00ff41;
+  --green-dim:  #00aa2a;
+  --green-dark: rgba(0, 255, 65, 0.07);
+  --green-glow: rgba(0, 255, 65, 0.55);
+  --amber:      #ffb000;
+  --red:        #ff3c3c;
+  --bg:         #000;
+  --border-dim: #005518;
+  --scanline:   rgba(0,0,0,0.18);
+  --font: 'VT323', 'Courier New', monospace;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  box-shadow: inset 0 0 120px rgba(0,255,65,0.06);
+}
+
+/* ── CRT effects ───────────────────────────────────────────────────────────── */
+
+/* Scanlines — fixed overlay, always on top of content */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 2px,
+    var(--scanline) 2px,
+    var(--scanline) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Subtle phosphor tint + flicker */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 255, 65, 0.012);
+  pointer-events: none;
+  z-index: 999;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0%   { opacity: 1;    }
+  50%  { opacity: 0.97; }
+  100% { opacity: 1;    }
+}
+
+/* Vignette — darkens corners like a real CRT bezel */
+.vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,0.88) 100%);
+  pointer-events: none;
+  z-index: 998;
+}
+
+/* Content sits above background effects but below the CRT overlays */
+body > * { position: relative; z-index: 1; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 540px;
+  padding: 0 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Site header ───────────────────────────────────────────────────────────── */
+.site-header {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 1.8rem 1rem 1.2rem;
+}
+
+/* Terminal title (replaces split-flap board) */
+.title {
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-shadow: 0 0 10px var(--green), 0 0 30px var(--green-glow);
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--green-dim);
+  letter-spacing: 3px;
+  margin-top: .2rem;
+}
+
+/* Blinking block cursor */
+.blink-cursor {
+  display: inline-block;
+  width: 12px;
+  height: 1em;
+  background: var(--green);
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Header nav — terminal command style */
+.header-nav {
+  display: flex;
+  gap: 1.8rem;
+  align-items: flex-end;
+  padding-bottom: .1rem;
+}
+
+.admin-link {
+  font-family: var(--font);
+  font-size: 1.1rem;
+  color: var(--green-dim);
+  letter-spacing: 1px;
+  transition: color .1s, text-shadow .1s;
+}
+.admin-link::before { content: '> '; }
+.admin-link:hover {
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green-glow);
+}
+
+/* ── Upload card ───────────────────────────────────────────────────────────── */
+.upload-card {
+  width: 100%;
+  border: 1px solid var(--border-dim);
+  padding: 3rem 2rem;
+  text-align: center;
+  transition: border-color .2s, box-shadow .2s;
+  cursor: default;
+  position: relative;
+}
+
+/* Floating label sits on the border */
+.upload-card::before {
+  content: '[ DROP ZONE ]';
+  position: absolute;
+  top: -.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 .6rem;
+  font-size: .85rem;
+  color: var(--green-dim);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.upload-card.dragging {
+  border-color: var(--green);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+
+.upload-icon {
+  color: var(--green-dim);
+  margin-bottom: 1.2rem;
+  display: flex;
+  justify-content: center;
+  transition: color .2s, filter .2s;
+}
+.upload-card.dragging .upload-icon {
+  color: var(--green);
+  filter: drop-shadow(0 0 6px var(--green-glow));
+}
+
+.upload-title {
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  margin-bottom: .5rem;
+  text-shadow: 0 0 6px var(--green-glow);
+}
+
+.upload-sub {
+  font-size: 1rem;
+  color: var(--green-dim);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.upload-buttons {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+}
+
+.upload-note {
+  font-size: .85rem;
+  color: var(--green-dim);
+  letter-spacing: 1px;
+}
+
+.mono { font-family: var(--font); }
+
+/* ── Status / result card ──────────────────────────────────────────────────── */
+.status-card {
+  width: 100%;
+  border: 1px solid var(--border-dim);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+/* Spinning terminal cursor instead of a circle */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-dim);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 0 auto 1.2rem;
+  box-shadow: 0 0 8px var(--green-glow);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#progressLabel { color: var(--green-dim); font-size: 1rem; letter-spacing: 1px; }
+
+.result-icon {
+  font-size: 2rem;
+  margin-bottom: .8rem;
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green-glow);
+}
+.error-icon { color: var(--red); text-shadow: 0 0 8px rgba(255,60,60,.6); }
+
+.result-label {
+  font-size: .9rem;
+  color: var(--green-dim);
+  margin-bottom: .3rem;
+  letter-spacing: 1px;
+}
+
+.result-url {
+  display: block;
+  font-family: var(--font);
+  font-size: 1.15rem;
+  color: var(--green);
+  word-break: break-all;
+  margin-bottom: 1.4rem;
+  transition: text-shadow .15s;
+}
+.result-url:hover { text-shadow: 0 0 8px var(--green-glow); }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+/* Terminal style: text inside [ brackets ] */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .35rem .9rem;
+  font-family: var(--font);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 1px solid var(--border-dim);
+  background: transparent;
+  color: var(--green-dim);
+  transition: border-color .12s, color .12s, text-shadow .12s, box-shadow .12s;
+  white-space: nowrap;
+}
+
+.btn::before { content: '[ '; color: var(--green-dim); }
+.btn::after  { content: ' ]'; color: var(--green-dim); }
+
+.btn:disabled { opacity: .3; cursor: not-allowed; }
+
+.btn:not(:disabled):hover {
+  border-color: var(--green);
+  color: var(--green);
+  text-shadow: 0 0 6px var(--green-glow);
+  box-shadow: 0 0 10px var(--green-glow);
+}
+.btn:not(:disabled):hover::before,
+.btn:not(:disabled):hover::after { color: var(--green); }
+
+.btn-primary {
+  border-color: var(--green);
+  color: var(--green);
+  width: 100%;
+  padding: .55rem 1.2rem;
+  font-size: 1.15rem;
+  margin-bottom: .6rem;
+  text-shadow: 0 0 4px var(--green-glow);
+  letter-spacing: 2px;
+}
+.btn-primary::before,
+.btn-primary::after { color: var(--green); }
+
+.btn-secondary { color: var(--green-dim); border-color: var(--border-dim); }
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--green-dim);
+  font-size: .95rem;
+}
+.btn-ghost:not(:disabled):hover {
+  box-shadow: none;
+  border-color: transparent;
+  text-shadow: 0 0 6px var(--green-glow);
+}
+
+.btn-danger {
+  color: var(--red);
+  border-color: #550000;
+}
+.btn-danger::before,
+.btn-danger::after { color: var(--red); }
+.btn-danger:not(:disabled):hover {
+  border-color: var(--red);
+  color: var(--red);
+  text-shadow: 0 0 6px rgba(255,60,60,.6);
+  box-shadow: 0 0 10px rgba(255,60,60,.35);
+}
+
+.btn-sm { padding: .15rem .5rem; font-size: .9rem; }
+
+/* ── Admin layout ──────────────────────────────────────────────────────────── */
+.admin-main {
+  width: 100%;
+  max-width: 900px;
+  padding: 0 1rem 4rem;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: .8rem;
+  border-bottom: 1px solid var(--border-dim);
+  padding-bottom: .8rem;
+}
+
+.admin-header h1 {
+  font-size: 1.4rem;
+  letter-spacing: 3px;
+  color: var(--green-dim);
+}
+
+/* Sites table */
+.sites-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.sites-table th {
+  text-align: left;
+  font-size: .85rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green-dim);
+  padding: .4rem .75rem;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.sites-table td {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid #050f05;
+  vertical-align: middle;
+  font-size: 1rem;
+}
+
+.sites-table tr:last-child td { border-bottom: none; }
+.sites-table tr:hover td {
+  background: var(--green-dark);
+}
+
+.site-id {
+  font-family: var(--font);
+  color: var(--green-dim);
+}
+
+.site-name-cell { max-width: 200px; }
+.site-name-text { cursor: pointer; }
+.site-name-text:hover { text-shadow: 0 0 6px var(--green-glow); }
+
+.site-name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--green);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: 1rem;
+  padding: .1rem .2rem;
+  width: 100%;
+  outline: none;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: .05rem .4rem;
+  font-size: .82rem;
+  letter-spacing: 1px;
+  border: 1px solid;
+}
+.badge-protected { color: var(--amber); border-color: #664400; }
+.badge-public    { color: var(--green-dim); border-color: var(--border-dim); }
+
+.actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--green-dim);
+  letter-spacing: 1px;
+}
+.empty-state p { margin-top: .5rem; font-size: 1rem; }
+
+/* ── Modal ─────────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 6, 0, .9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.modal {
+  background: var(--bg);
+  border: 1px solid var(--green-dim);
+  padding: 1.8rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 24px var(--green-glow);
+}
+
+.modal h2 {
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+  color: var(--green);
+  text-shadow: 0 0 6px var(--green-glow);
+}
+
+.modal input[type=password],
+.modal input[type=text] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: 1rem;
+  padding: .4rem .2rem;
+  outline: none;
+  margin-bottom: .8rem;
+}
+.modal input:focus { border-bottom-color: var(--green); }
+
+.modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .6rem; }
+.modal-error { color: var(--red); font-size: .95rem; margin-bottom: .6rem; letter-spacing: 1px; }
+
+/* ── Login / password prompt card ──────────────────────────────────────────── */
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--green-dim);
+  padding: 2.5rem 2rem;
+  box-shadow: 0 0 24px rgba(0,255,65,.15);
+}
+
+.login-card h1 {
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  margin-bottom: 1.4rem;
+  text-align: center;
+  text-shadow: 0 0 8px var(--green-glow);
+}
+
+.login-card input[type=password] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: 1.1rem;
+  padding: .5rem .2rem;
+  outline: none;
+  margin-bottom: 1rem;
+  display: block;
+  caret-color: var(--green);
+}
+.login-card input[type=password]:focus { border-bottom-color: var(--green); }
+
+.login-error {
+  color: var(--red);
+  font-size: 1rem;
+  margin-bottom: .6rem;
+  text-align: center;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(255,60,60,.5);
+}
+
+/* ── Toast notification ────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  padding: .4rem 1.4rem;
+  white-space: nowrap;
+  animation: toastIn .2s ease, toastOut .3s ease 1.7s forwards;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: 0 0 10px var(--green-glow);
+}
+@keyframes toastIn  { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+@keyframes toastOut { to   { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+
+/* ── File manager modal ────────────────────────────────────────────────────── */
+.modal-wide {
+  max-width: 780px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 78vh;
+  max-height: 78vh;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--green-dim);
+  box-shadow: 0 0 24px var(--green-glow);
+}
+
+.fm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem .8rem;
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
+
+.fm-header h2 {
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+  margin-bottom: .15rem;
+  text-shadow: 0 0 6px var(--green-glow);
+}
+
+.fm-meta { font-size: .9rem; color: var(--green-dim); letter-spacing: 1px; }
+
+.fm-dropzone {
+  margin: .8rem 1.5rem;
+  padding: .7rem 1rem;
+  border: 1px dashed var(--border-dim);
+  font-family: var(--font);
+  font-size: 1rem;
+  color: var(--green-dim);
+  text-align: center;
+  transition: border-color .15s, box-shadow .15s;
+  cursor: default;
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.fm-dropzone.fm-drag {
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+}
+
+.fm-list-wrap {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;   /* critical: lets flex child scroll */
+  padding: 0 1.5rem 1.5rem;
+}
+
+.fm-list { display: flex; flex-direction: column; gap: 1px; }
+
+.fm-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .35rem .4rem;
+  transition: background .1s;
+}
+.fm-row:hover { background: var(--green-dark); }
+
+.fm-path {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 1rem;
+  color: var(--green);
+  word-break: break-all;
+  min-width: 0;
+}
+.fm-path::before { content: '> '; color: var(--green-dim); }
+
+.fm-size {
+  font-family: var(--font);
+  font-size: .9rem;
+  color: var(--green-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fm-loading,
+.fm-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--green-dim);
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+/* ── Scrollbars ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .sites-table th:nth-child(2),
+  .sites-table td:nth-child(2) { display: none; }
+
+  .title { font-size: 1.7rem; letter-spacing: 2px; }
+}
+
+/* ── W.O.P.R. Terminal Login ─────────────────────────────────────────────── */
+
+.wopr-wrap {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-dim);
+  box-shadow: 0 0 40px rgba(0,255,65,0.06);
+  margin: 1rem 0 2rem;
+}
+
+.wopr-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem 1rem;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(0,255,65,0.018);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wopr-brand { font-size: 1.5rem; letter-spacing: 5px; text-shadow: 0 0 10px var(--green-glow); line-height: 1; }
+.wopr-brand-sub { font-size: .68rem; color: var(--green-dim); letter-spacing: 2px; margin-top: .15rem; }
+
+.wopr-defcon-block { display: flex; align-items: baseline; gap: .35rem; }
+.wopr-defcon-label { font-size: .78rem; color: var(--green-dim); letter-spacing: 3px; }
+.wopr-defcon-num {
+  font-size: 2.2rem; line-height: 1;
+  color: var(--red);
+  text-shadow: 0 0 16px rgba(255,60,60,.9);
+  animation: blink 1.2s step-end infinite;
+}
+
+.wopr-clock-block { text-align: right; font-size: .78rem; color: var(--green-dim); letter-spacing: 1px; line-height: 1.9; }
+.wopr-threat-badge { color: var(--red); letter-spacing: 2px; text-shadow: 0 0 6px rgba(255,60,60,.5); }
+
+@keyframes blinkSlow { 0%,100% { opacity: 1; } 50% { opacity: 0.15; } }
+.blink-slow { animation: blinkSlow 1.4s ease-in-out infinite; }
+
+/* Three-column map area */
+.wopr-display {
+  display: flex;
+  height: 260px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.wopr-panel {
+  width: 175px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border-dim);
+}
+.wopr-panel:last-child { border-right: none; border-left: 1px solid var(--border-dim); }
+
+.wopr-panel-hdr {
+  font-size: .67rem; letter-spacing: 1px;
+  color: var(--green-dim); padding: .3rem .5rem;
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
+
+.wopr-panel-body { flex: 1; overflow: hidden; padding: .3rem .5rem; font-size: .8rem; line-height: 1.6; }
+
+.wp-line { color: var(--green-dim); white-space: nowrap; overflow: hidden; letter-spacing: .5px; }
+
+.wopr-map { flex: 1; min-width: 0; display: block; }
+
+/* Terminal / login area */
+.wopr-term { display: flex; flex-direction: column; height: 195px; }
+
+.wopr-term-out { flex: 1; overflow-y: auto; padding: .5rem .8rem; min-height: 0; }
+
+.wt-line { font-size: .88rem; line-height: 1.7; color: var(--green); letter-spacing: .5px; }
+.wt-blank { height: 1.1em; }
+
+.wopr-term-form {
+  padding: .45rem .8rem;
+  border-top: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.wopr-form-inner { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+.wopr-prompt { font-size: .92rem; color: var(--green-dim); letter-spacing: 2px; white-space: nowrap; }
+
+.wopr-form-inner input[type=password] {
+  flex: 1; min-width: 100px;
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--green-dim);
+  color: var(--green); font-family: var(--font);
+  font-size: 1rem; padding: .2rem .3rem;
+  outline: none; caret-color: var(--green); letter-spacing: 3px;
+}
+.wopr-form-inner input[type=password]:focus { border-bottom-color: var(--green); }
+
+.wopr-submit { width: auto !important; padding: .22rem .85rem !important; margin: 0 !important; font-size: .85rem !important; }
+
+.wopr-denied { font-size: .85rem; color: var(--red); letter-spacing: 2px; text-shadow: 0 0 6px rgba(255,60,60,.5); }
+
+@media (max-width: 680px) {
+  .wopr-panel { display: none; }
+  .wopr-display { height: 180px; }
+  .wopr-term { height: 210px; }
+}

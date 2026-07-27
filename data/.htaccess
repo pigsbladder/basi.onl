@@ -1,0 +1,3 @@
+# Block direct HTTP access to metadata
+Order deny,allow
+Deny from all

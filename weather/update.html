@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌪️ Tornado Tracker — Data Updater</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #080c1a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    .container { max-width: 760px; margin: 0 auto; }
+
+    h1 { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+    h1 span { color: #f97316; }
+    .subtitle { color: #ffffff55; font-size: 0.82rem; margin-bottom: 32px; }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: #ffffff50; margin-bottom: 14px;
+    }
+
+    .fetch-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      color: white; border: none; border-radius: 10px;
+      padding: 13px 24px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+      margin-bottom: 12px;
+    }
+    .fetch-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .fetch-btn:active { transform: translateY(0); }
+    .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .status {
+      font-size: 0.83rem; padding: 11px 14px;
+      border-radius: 8px; line-height: 1.5; display: none;
+    }
+    .status.info  { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); display: block; }
+    .status.ok    { background: rgba(34,197,94,0.12);  color: #86efac; border: 1px solid rgba(34,197,94,0.25);  display: block; }
+    .status.error { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.25);  display: block; }
+    .status.warn  { background: rgba(234,179,8,0.12);  color: #fde047; border: 1px solid rgba(234,179,8,0.25);  display: block; }
+
+    /* Live stats bar that appears after fetch */
+    .live-stats {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px; margin-top: 14px;
+    }
+    .live-stat {
+      background: rgba(34,197,94,0.07);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .live-stat-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #22c55e80; margin-bottom: 2px; }
+    .live-stat-value { font-size: 1.4rem; font-weight: 800; color: #22c55e; }
+
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 500px) { .fields-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em; color: #ffffff50;
+    }
+    .src-tag {
+      font-size: 0.65rem; font-weight: 500; text-transform: none;
+      letter-spacing: 0; margin-left: 6px; padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .src-tag.iem  { background: rgba(249,115,22,0.15); color: #f97316; }
+    .src-tag.noaa { background: rgba(59,130,246,0.15);  color: #93c5fd; }
+    .src-tag.calc { background: rgba(34,197,94,0.15);   color: #22c55e; }
+
+    .field input, .field select {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; color: white;
+      font-size: 0.95rem; padding: 10px 12px;
+      outline: none; transition: border-color 0.15s; width: 100%;
+    }
+    .field input:focus { border-color: rgba(249,115,22,0.6); }
+    .field input.auto-filled { border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.05); }
+    .field input[readonly] { color: #22c55e; cursor: default; }
+
+    .partial-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    .partial-row input[type=checkbox] { width: 18px; height: 18px; accent-color: #f97316; cursor: pointer; }
+    .partial-row label { font-size: 0.85rem; color: #ffffff70; cursor: pointer; }
+
+    .output-box {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 14px 16px;
+      font-family: "SF Mono","Fira Code","Courier New",monospace;
+      font-size: 0.82rem; color: #93c5fd;
+      line-height: 1.6; word-break: break-all;
+      white-space: pre-wrap; margin-bottom: 10px; min-height: 52px;
+    }
+    .output-box.msg { color: #e2e8f0; font-family: inherit; font-size: 0.85rem; }
+
+    .copy-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white; border-radius: 8px;
+      padding: 8px 16px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; margin-right: 8px;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.14); }
+    .copy-btn.copied { background: rgba(34,197,94,0.2); border-color: rgba(34,197,94,0.4); color: #86efac; }
+
+    .source-links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .source-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 9px 14px;
+      color: #94a3b8; text-decoration: none;
+      font-size: 0.8rem; font-weight: 500; transition: all 0.15s;
+    }
+    .source-link:hover { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.3); color: #f97316; }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 14px 0; }
+    .note { font-size: 0.76rem; color: #ffffff35; line-height: 1.5; margin-top: 10px; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🌪️ <span>Tornado Tracker</span> — Data Updater</h1>
+  <p class="subtitle">Pulls real warning counts from IEM VTEC, then generates a ready-to-paste update message.</p>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-title">Step 1 — Fetch Warning Count from IEM</div>
+    <button class="fetch-btn" id="fetchBtn" onclick="fetchData()">
+      <span id="spin" class="spinner"></span>
+      ⚡ Fetch <span id="fetchYearLabel"></span> Data from IEM VTEC
+    </button>
+    <div id="fetchStatus" class="status"></div>
+
+    <!-- Live stat tiles shown after successful fetch -->
+    <div class="live-stats" id="liveStats">
+      <div class="live-stat">
+        <div class="live-stat-label">Warnings</div>
+        <div class="live-stat-value" id="ls_warnings">—</div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">WFOs Active</div>
+        <div class="live-stat-value" id="ls_wfos">—</div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">Source</div>
+        <div class="live-stat-value" style="font-size:0.85rem;padding-top:4px">IEM VTEC</div>
+      </div>
+    </div>
+
+    <p class="note">
+      Source: <strong style="color:#f97316">Iowa Environmental Mesonet VTEC Archive</strong> — public API, CORS-open.<br>
+      Counts all NWS Tornado Warnings (TO.W) issued by every WFO in CONUS for the selected year.
+      Confirmed tornado counts, fatalities, and injuries need to be filled manually from NOAA Storm Events (link below).
+    </p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="card-title">Step 2 — Fill / Verify All Stats</div>
+    <div class="fields-grid">
+
+      <div class="field">
+        <label>Year</label>
+        <select id="f_year" onchange="onYearChange()"></select>
+      </div>
+
+      <div class="field">
+        <label>Warnings Issued <span class="src-tag iem">IEM — auto-fetched</span></label>
+        <input type="number" id="f_warnings" placeholder="Click Fetch above" oninput="recalc()" />
+      </div>
+
+      <div class="field">
+        <label>Confirmed Tornadoes <span class="src-tag noaa">NOAA Storm Events</span></label>
+        <input type="number" id="f_confirmed" placeholder="e.g. 1134" oninput="recalc()" />
+      </div>
+
+      <div class="field">
+        <label>False Alarm Ratio <span class="src-tag calc">Auto-calculated</span></label>
+        <input type="text" id="f_far" readonly placeholder="Fill warnings + confirmed first" />
+      </div>
+
+      <div class="field">
+        <label>Fatalities <span class="src-tag noaa">NOAA Storm Events</span></label>
+        <input type="number" id="f_fatalities" placeholder="e.g. 21" />
+      </div>
+
+      <div class="field">
+        <label>Injuries <span class="src-tag noaa">NOAA Storm Events</span></label>
+        <input type="number" id="f_injuries" placeholder="e.g. 312" />
+      </div>
+
+      <div class="field">
+        <label>Lead Time (min) <span class="src-tag noaa">NWS / manual</span></label>
+        <input type="number" id="f_leadtime" step="0.1" placeholder="e.g. 15.1" />
+      </div>
+
+      <div class="field" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <div class="partial-row">
+          <input type="checkbox" id="f_partial" />
+          <label for="f_partial">Partial year (still in progress)</label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="card-title">Step 3 — Generate Update</div>
+    <button class="fetch-btn" onclick="generate()"
+      style="background:linear-gradient(135deg,#7c3aed,#4f46e5);margin-bottom:18px">
+      ✨ Generate Output
+    </button>
+
+    <hr class="divider" />
+    <div class="card-title" style="margin-bottom:8px">Ready-to-paste message (send this to Magica)</div>
+    <div class="output-box msg" id="msgOutput">Fill the fields above then click Generate.</div>
+    <button class="copy-btn" onclick="copyEl('msgOutput',this)">Copy message</button>
+
+    <hr class="divider" style="margin-top:16px" />
+    <div class="card-title" style="margin-bottom:8px">TypeScript data line (for reference)</div>
+    <div class="output-box" id="tsOutput">Fill the fields above then click Generate.</div>
+    <button class="copy-btn" onclick="copyEl('tsOutput',this)">Copy snippet</button>
+  </div>
+
+  <!-- Source links -->
+  <div class="card">
+    <div class="card-title">Manual Source Pages</div>
+    <div class="source-links">
+      <a class="source-link" id="iemLink" href="https://mesonet.agron.iastate.edu/vtec/" target="_blank">📡 IEM VTEC Browser</a>
+      <a class="source-link" href="https://www.ncdc.noaa.gov/stormevents/choosedates.jsp?statefips=-999%2CALL" target="_blank">⚡ NOAA Storm Events</a>
+      <a class="source-link" href="https://www.spc.noaa.gov/climo/online/monthly/newm.html" target="_blank">🌪️ SPC Monthly Stats</a>
+      <a class="source-link" href="https://www.spc.noaa.gov/climo/torn/ytd.html" target="_blank">📊 SPC Year-to-Date</a>
+    </div>
+    <p class="note" style="margin-top:12px">
+      <strong style="color:#ffffff60">What to look up manually:</strong>
+      Confirmed tornado count → NOAA Storm Events (filter by event type "Tornado" and year) ·
+      Fatalities/injuries → same page ·
+      Lead time → stays relatively stable year-to-year, fine to leave unchanged
+    </p>
+  </div>
+
+</div>
+<script>
+  const currentYear = new Date().getFullYear();
+
+  // Populate year dropdown
+  const yearSel = document.getElementById("f_year");
+  for (let y = currentYear; y >= 2005; y--) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+  yearSel.value = currentYear;
+  onYearChange();
+
+  function onYearChange() {
+    const y = yearSel.value;
+    document.getElementById("fetchYearLabel").textContent = y;
+    document.getElementById("iemLink").href =
+      `https://mesonet.agron.iastate.edu/vtec/search.php#year/${y}/events/TO.W`;
+    const isPartial = parseInt(y) === currentYear;
+    document.getElementById("f_partial").checked = isPartial;
+    // Clear auto-filled fields when year changes
+    document.getElementById("f_warnings").value = "";
+    document.getElementById("f_warnings").classList.remove("auto-filled");
+    document.getElementById("f_far").value = "";
+    document.getElementById("liveStats").style.display = "none";
+    document.getElementById("fetchStatus").className = "status";
+  }
+
+  function setStatus(type, msg) {
+    const el = document.getElementById("fetchStatus");
+    el.className = "status " + type;
+    el.textContent = msg;
+  }
+
+  function recalc() {
+    const w = parseFloat(document.getElementById("f_warnings").value);
+    const c = parseFloat(document.getElementById("f_confirmed").value);
+    if (w > 0 && c >= 0 && c <= w) {
+      document.getElementById("f_far").value = (((w - c) / w) * 100).toFixed(1) + "%";
+    } else {
+      document.getElementById("f_far").value = "";
+    }
+  }
+
+  async function fetchData() {
+    const year = yearSel.value;
+    const btn  = document.getElementById("fetchBtn");
+    const spin = document.getElementById("spin");
+    btn.disabled = true;
+    spin.style.display = "block";
+    setStatus("info", `Fetching ${year} tornado warning data from IEM VTEC archive…`);
+
+    // IEM vtec_max_etn gives max event ID per WFO per phenomena
+    // Summing max_eventid for TO.W rows = total warnings issued
+    const url = `https://mesonet.agron.iastate.edu/json/vtec_max_etn.py?year=${year}`;
+
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // data.table rows: [wfo, phenomena, significance, max_eventid, url]
+      const toW = (data.table || []).filter(r => r[1] === "TO" && r[2] === "W");
+      if (!toW.length) {
+        setStatus("warn", `No tornado warnings found for ${year} yet, or the year is too early in the season.`);
+        btn.disabled = false; spin.style.display = "none"; return;
+      }
+
+      const totalWarnings = toW.reduce((sum, r) => sum + r[3], 0);
+      const wfoCount = toW.length;
+
+      // Fill warnings field
+      document.getElementById("f_warnings").value = totalWarnings;
+      document.getElementById("f_warnings").classList.add("auto-filled");
+      recalc();
+
+      // Show live stat tiles
+      document.getElementById("ls_warnings").textContent = totalWarnings.toLocaleString();
+      document.getElementById("ls_wfos").textContent = wfoCount;
+      document.getElementById("liveStats").style.display = "grid";
+
+      setStatus("ok",
+        `✓ Fetched ${totalWarnings.toLocaleString()} tornado warnings from ${wfoCount} WFOs for ${year}. ` +
+        `Now fill in Confirmed, Fatalities, and Injuries from NOAA Storm Events (link below), then click Generate.`
+      );
+    } catch (err) {
+      setStatus("error",
+        `Fetch failed: ${err.message}. ` +
+        `Try opening the IEM VTEC Browser link below to find the count manually.`
+      );
+    } finally {
+      btn.disabled = false;
+      spin.style.display = "none";
+    }
+  }
+
+  function generate() {
+    const year       = parseInt(yearSel.value);
+    const warnings   = parseInt(document.getElementById("f_warnings").value);
+    const confirmed  = parseInt(document.getElementById("f_confirmed").value);
+    const fatalities = parseInt(document.getElementById("f_fatalities").value) || 0;
+    const injuries   = parseInt(document.getElementById("f_injuries").value) || 0;
+    const leadtime   = parseFloat(document.getElementById("f_leadtime").value) || null;
+    const partial    = document.getElementById("f_partial").checked;
+
+    if (!warnings || !confirmed) {
+      alert("Please fill in at least Warnings Issued and Confirmed Tornadoes before generating.");
+      return;
+    }
+
+    const far = (((warnings - confirmed) / warnings) * 100).toFixed(1);
+    const now = new Date();
+    const months = ["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"];
+    const throughDate = `through ${months[now.getMonth()]} ${year}`;
+
+    const partialFlag = partial ? ", partial: true" : "";
+    const leadStr     = leadtime ? leadtime : "???";
+
+    const ts = `{ year: ${year}, warnings: ${warnings}, confirmed: ${confirmed}, far: ${far}, leadTimeMin: ${leadStr}, injuries: ${injuries}, fatalities: ${fatalities}${partialFlag} },`;
+
+    const msg =
+`Update ${year} stats in the tornado tracker:
+
+Warnings issued:     ${warnings.toLocaleString()}
+Confirmed tornadoes: ${confirmed.toLocaleString()}
+False alarm ratio:   ${far}%
+Fatalities:          ${fatalities.toLocaleString()}
+Injuries:            ${injuries.toLocaleString()}
+Lead time:           ${leadtime ? leadtime + " min" : "unchanged"}
+Partial year:        ${partial ? `Yes (${throughDate})` : "No — full year"}`;
+
+    document.getElementById("tsOutput").textContent  = ts;
+    document.getElementById("msgOutput").textContent = msg;
+  }
+
+  function copyEl(id, btn) {
+    navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = "✓ Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove("copied"); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
