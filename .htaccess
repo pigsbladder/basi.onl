@@ -1,0 +1,14 @@
+Options -Indexes
+RewriteEngine On
+
+# Increase upload limits (remove if your host doesn't allow php_value in .htaccess)
+php_value upload_max_filesize 512M
+php_value post_max_size       512M
+php_value memory_limit        256M
+php_value max_execution_time  300
+php_value max_input_time      300
+
+# Serve real files and directories directly (assets, etc.)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]

@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 2026 — Alaska Schedule</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 17px;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: #1a0000;
+      border-bottom: 3px solid #e10600;
+      padding: 18px 20px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+
+    header h1 span { color: #e10600; }
+
+    #countdown-bar {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    #countdown-bar strong { color: #fff; }
+    #countdown-bar .session-name { color: #e10600; font-weight: 600; }
+
+    .races { padding: 12px 12px 0; display: flex; flex-direction: column; gap: 12px; }
+
+    .race-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2a2a2a;
+    }
+
+    .race-card.next-race { border-color: #e10600; }
+
+    .race-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .race-header:active { background: #222; }
+
+    .race-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .race-name {
+      font-weight: 700;
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .race-meta {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .race-badges { display: flex; gap: 6px; align-items: center; }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-sprint, .badge-street, .badge-must, .badge-meh, .badge-sleep {
+      min-width: 86px;
+      text-align: center;
+    }
+
+    .verdict-badge { display: contents; }
+
+    .badge-sprint { background: #7b3f00; color: #ff9a3c; }
+    .badge-street { background: #0d3b4f; color: #5cc8f0; }
+    .badge-next { background: #e10600; color: #fff; }
+    .badge-must { background: #0f3d1c; color: #4cd964; }
+    .badge-meh { background: #3d3a0f; color: #e6d94c; }
+    .badge-sleep { background: #2a2a2a; color: #999; }
+
+    .race-card.v-sleep .race-header { opacity: 0.5; }
+
+    .verdict {
+      display: flex;
+      gap: 6px;
+      padding: 12px 0 6px;
+    }
+
+    .verdict button {
+      flex: 1;
+      background: #222;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px 4px;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .verdict button:hover { background: #2a2a2a; }
+    .verdict button.active[data-v="must"] { background: #0f3d1c; color: #4cd964; border-color: #4cd964; }
+    .verdict button.active[data-v="meh"] { background: #3d3a0f; color: #e6d94c; border-color: #e6d94c; }
+    .verdict button.active[data-v="sleep"] { background: #2a2a2a; color: #fff; border-color: #888; }
+
+    .chevron {
+      color: #555;
+      font-size: 18px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .race-card.open .chevron { transform: rotate(180deg); }
+
+    .sessions {
+      display: none;
+      padding: 0 14px 14px;
+      border-top: 1px solid #2a2a2a;
+    }
+
+    .race-card.open .sessions { display: block; }
+
+    .session {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid #222;
+    }
+
+    .session:last-child { border-bottom: none; }
+
+    .session-label {
+      font-size: 15px;
+      color: #aaa;
+      flex: 1;
+    }
+
+    .session.qualifying .session-label,
+    .session.sprint-qualifying .session-label {
+      color: #e10600;
+      font-weight: 700;
+    }
+
+    .session.race .session-label {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .session.sprint .session-label {
+      color: #ff9a3c;
+      font-weight: 600;
+    }
+
+    .session-time {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .time-main {
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .session.qualifying .time-main,
+    .session.sprint-qualifying .time-main { color: #ff4d4d; }
+
+    .time-day {
+      font-size: 13px;
+      color: #666;
+      margin-top: 1px;
+    }
+
+    .past { opacity: 0.38; }
+
+    .next-session-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: #e10600;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    #standings { padding: 12px 12px 0; }
+
+    .standings-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 760px) { .standings-grid { grid-template-columns: 1fr; } }
+
+    .st-panel {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px 14px 12px;
+    }
+
+    .st-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .st-title { font-weight: 700; font-size: 16px; color: #fff; }
+    .st-sub { font-size: 12px; color: #666; }
+
+    table.st { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+    table.st th {
+      text-align: right;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 6px 4px;
+    }
+
+    table.st td { padding: 4px 6px; border-top: 1px solid #222; text-align: right; font-variant-numeric: tabular-nums; }
+    table.st th:nth-child(1), table.st td:nth-child(1) { text-align: left; width: 28px; color: #777; }
+    table.st th:nth-child(2), table.st td:nth-child(2) { text-align: left; }
+    table.st th.team, table.st td.team { text-align: left; color: #888; }
+    table.st td.pts { color: #fff; font-weight: 700; }
+    table.st td.gap { color: #888; }
+    table.st tr.leader td:nth-child(2) { color: #fff; font-weight: 700; }
+
+    .team-bar {
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .driver-code { color: #666; font-size: 12px; margin-left: 6px; }
+
+    .st-more {
+      margin-top: 6px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+
+    .st-more:hover { color: #fff; }
+
+    .podium {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #ccc;
+      margin-top: 3px;
+    }
+
+    .podium:empty { display: none; }
+    .podium .p-pos { color: #666; font-weight: 700; margin-right: 3px; }
+    .podium .p-label { color: #666; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; align-self: center; }
+    .podium .team-bar { height: 11px; margin-right: 4px; }
+
+    .sprint-podium { padding: 8px 0 0; }
+
+    .tz-note {
+      text-align: center;
+      font-size: 13px;
+      color: #555;
+      padding: 16px 20px 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>F1 2026 <span>Alaska</span> Schedule</h1>
+  <div id="countdown-bar">Loading next session…</div>
+</header>
+
+<section id="standings"></section>
+
+<p class="tz-note">All times in Alaska time (AKDT/AKST) · Tap a race to expand</p>
+
+<div class="races" id="races"></div>
+
+<script>
+// UTC session times for the full 2026 F1 season
+const races = [
+  {
+    name: "Australian Grand Prix",
+    round: 1,
+    circuit: "Albert Park, Melbourne",
+    sprint: false,
+    street: true,
+    sessions: [
+      { label: "FP1",         type: "fp",                utc: "2026-03-06T01:30:00Z" },
+      { label: "FP2",         type: "fp",                utc: "2026-03-06T05:00:00Z" },
+      { label: "FP3",         type: "fp",                utc: "2026-03-07T01:30:00Z" },
+      { label: "Qualifying",  type: "qualifying",        utc: "2026-03-07T05:00:00Z" },
+      { label: "Race",        type: "race",              utc: "2026-03-08T04:00:00Z" },
+    ]
+  },
+  {
+    name: "Chinese Grand Prix",
+    round: 2,
+    circuit: "Shanghai International Circuit",
+    sprint: true,
+    sessions: [
+      { label: "FP1",                type: "fp",                utc: "2026-03-13T03:30:00Z" },
+      { label: "Sprint Qualifying",  type: "sprint-qualifying", utc: "2026-03-13T07:30:00Z" },
+      { label: "Sprint",             type: "sprint",            utc: "2026-03-14T03:00:00Z" },
+      { label: "Qualifying",         type: "qualifying",        utc: "2026-03-14T07:00:00Z" },
+      { label: "Race",               type: "race",              utc: "2026-03-15T07:00:00Z" },
+    ]
+  },
+  {
+    name: "Japanese Grand Prix",
+    round: 3,
+    circuit: "Suzuka",
+    sprint: false,
+    sessions: [
+      { label: "FP1",         type: "fp",                utc: "2026-03-27T02:30:00Z" },
+      { label: "FP2",         type: "fp",                utc: "2026-03-27T06:00:00Z" },
+      { label: "FP3",         type: "fp",                utc: "2026-03-28T02:30:00Z" },
+      { label: "Qualifying",  type: "qualifying",        utc: "2026-03-28T06:00:00Z" },
+      { label: "Race",        type: "race",              utc: "2026-03-29T05:00:00Z" },
+    ]
+  },
+  {
+    name: "Miami Grand Prix",
+    round: 4,
+    circuit: "Miami International Autodrome",
+    sprint: true,
+    street: true,
+    sessions: [
+      { label: "FP1",                type: "fp",                utc: "2026-05-01T16:00:00Z" },
+      { label: "Sprint Qualifying",  type: "sprint-qualifying", utc: "2026-05-01T20:30:00Z" },
+      { label: "Sprint",             type: "sprint",            utc: "2026-05-02T16:00:00Z" },
+      { label: "Qualifying",         type: "qualifying",        utc: "2026-05-02T20:00:00Z" },
+      { label: "Race",               type: "race",              utc: "2026-05-03T20:00:00Z" },
+    ]
+  },
+  {
+    name: "Canadian Grand Prix",
+    round: 5,
+    circuit: "Circuit Gilles Villeneuve",
+    sprint: true,
+    sessions: [
+      { label: "FP1",                type: "fp",                utc: "2026-05-22T16:30:00Z" },
+      { label: "Sprint Qualifying",  type: "sprint-qualifying", utc: "2026-05-22T20:30:00Z" },
+      { label: "Sprint",             type: "sprint",            utc: "2026-05-23T16:00:00Z" },
+      { label: "Qualifying",         type: "qualifying",        utc: "2026-05-23T20:00:00Z" },
+      { label: "Race",               type: "race",              utc: "2026-05-24T20:00:00Z" },
+    ]
+  },
+  {
+    name: "Monaco Grand Prix",
+    round: 6,
+    circuit: "Circuit de Monaco",
+    sprint: false,
+    street: true,
+    sessions: [
+      { label: "FP1",         type: "fp",                utc: "2026-06-05T11:30:00Z" },
+      { label: "FP2",         type: "fp",                utc: "2026-06-05T15:00:00Z" },
+      { label: "FP3",         type: "fp",                utc: "2026-06-06T10:30:00Z" },
+      { label: "Qualifying",  type: "qualifying",        utc: "2026-06-06T14:00:00Z" },
+      { label: "Race",        type: "race",              utc: "2026-06-07T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Barcelona Grand Prix",
+    round: 7,
+    circuit: "Circuit de Barcelona-Catalunya",
+    sprint: false,
+    sessions: [
+      { label: "FP1",         type: "fp",                utc: "2026-06-12T11:30:00Z" },
+      { label: "FP2",         type: "fp",                utc: "2026-06-12T15:00:00Z" },
+      { label: "FP3",         type: "fp",                utc: "2026-06-13T10:30:00Z" },
+      { label: "Qualifying",  type: "qualifying",        utc: "2026-06-13T14:00:00Z" },
+      { label: "Race",        type: "race",              utc: "2026-06-14T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Austrian Grand Prix",
+    round: 8,
+    circuit: "Red Bull Ring",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",          utc: "2026-06-26T11:30:00Z" },
+      { label: "FP2",        type: "fp",          utc: "2026-06-26T15:00:00Z" },
+      { label: "FP3",        type: "fp",          utc: "2026-06-27T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying",  utc: "2026-06-27T14:00:00Z" },
+      { label: "Race",       type: "race",        utc: "2026-06-28T13:00:00Z" },
+    ]
+  },
+  {
+    name: "British Grand Prix",
+    round: 9,
+    circuit: "Silverstone",
+    sprint: true,
+    sessions: [
+      { label: "FP1",               type: "fp",                utc: "2026-07-03T11:30:00Z" },
+      { label: "Sprint Qualifying", type: "sprint-qualifying", utc: "2026-07-03T15:30:00Z" },
+      { label: "Sprint",            type: "sprint",            utc: "2026-07-04T11:00:00Z" },
+      { label: "Qualifying",        type: "qualifying",        utc: "2026-07-04T15:00:00Z" },
+      { label: "Race",              type: "race",              utc: "2026-07-05T14:00:00Z" },
+    ]
+  },
+  {
+    name: "Belgian Grand Prix",
+    round: 10,
+    circuit: "Circuit de Spa-Francorchamps",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-07-17T11:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-07-17T15:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-07-18T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-07-18T14:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-07-19T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Hungarian Grand Prix",
+    round: 11,
+    circuit: "Hungaroring",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-07-24T11:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-07-24T15:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-07-25T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-07-25T14:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-07-26T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Dutch Grand Prix",
+    round: 12,
+    circuit: "Zandvoort",
+    sprint: true,
+    sessions: [
+      { label: "FP1",               type: "fp",                utc: "2026-08-21T10:30:00Z" },
+      { label: "Sprint Qualifying", type: "sprint-qualifying", utc: "2026-08-21T14:30:00Z" },
+      { label: "Sprint",            type: "sprint",            utc: "2026-08-22T10:00:00Z" },
+      { label: "Qualifying",        type: "qualifying",        utc: "2026-08-22T14:00:00Z" },
+      { label: "Race",              type: "race",              utc: "2026-08-23T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Italian Grand Prix",
+    round: 13,
+    circuit: "Monza",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-09-04T10:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-09-04T14:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-09-05T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-09-05T14:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-09-06T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Spanish Grand Prix",
+    round: 14,
+    circuit: "Madring, Madrid",
+    sprint: false,
+    street: true,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-09-11T11:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-09-11T15:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-09-12T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-09-12T14:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-09-13T13:00:00Z" },
+    ]
+  },
+  {
+    name: "Azerbaijan Grand Prix",
+    round: 15,
+    circuit: "Baku City Circuit",
+    sprint: false,
+    street: true,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-09-24T08:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-09-24T12:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-09-25T08:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-09-25T12:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-09-26T11:00:00Z" },
+    ]
+  },
+  {
+    name: "Bahrain Grand Prix",
+    round: 16,
+    circuit: "Sepang International Circuit, Malaysia",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-10-02T04:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-10-02T08:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-10-03T04:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-10-03T08:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-10-04T07:00:00Z" },
+    ]
+  },
+  {
+    name: "Singapore Grand Prix",
+    round: 17,
+    circuit: "Marina Bay Street Circuit",
+    sprint: true,
+    street: true,
+    sessions: [
+      { label: "FP1",               type: "fp",                utc: "2026-10-09T08:30:00Z" },
+      { label: "Sprint Qualifying", type: "sprint-qualifying", utc: "2026-10-09T12:30:00Z" },
+      { label: "Sprint",            type: "sprint",            utc: "2026-10-10T09:00:00Z" },
+      { label: "Qualifying",        type: "qualifying",        utc: "2026-10-10T13:00:00Z" },
+      { label: "Race",              type: "race",              utc: "2026-10-11T12:00:00Z" },
+    ]
+  },
+  {
+    name: "United States Grand Prix",
+    round: 18,
+    circuit: "Circuit of the Americas",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-10-23T17:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-10-23T21:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-10-24T17:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-10-24T21:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-10-25T20:00:00Z" },
+    ]
+  },
+  {
+    name: "Mexico City Grand Prix",
+    round: 19,
+    circuit: "Autódromo Hermanos Rodríguez",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-10-30T18:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-10-30T22:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-10-31T17:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-10-31T21:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-11-01T20:00:00Z" },
+    ]
+  },
+  {
+    name: "Brazilian Grand Prix",
+    round: 20,
+    circuit: "Interlagos",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-11-06T15:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-11-06T19:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-11-07T14:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-11-07T18:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-11-08T17:00:00Z" },
+    ]
+  },
+  {
+    name: "Las Vegas Grand Prix",
+    round: 21,
+    circuit: "Las Vegas Strip Circuit",
+    sprint: false,
+    street: true,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-11-20T00:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-11-20T04:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-11-21T00:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-11-21T04:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-11-22T04:00:00Z" },
+    ]
+  },
+  {
+    name: "Qatar Grand Prix",
+    round: 22,
+    circuit: "Lusail International Circuit",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-11-27T13:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-11-27T17:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-11-28T14:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-11-28T18:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-11-29T16:00:00Z" },
+    ]
+  },
+  {
+    name: "Abu Dhabi Grand Prix",
+    round: 23,
+    circuit: "Yas Marina Circuit",
+    sprint: false,
+    sessions: [
+      { label: "FP1",        type: "fp",         utc: "2026-12-04T09:30:00Z" },
+      { label: "FP2",        type: "fp",         utc: "2026-12-04T13:00:00Z" },
+      { label: "FP3",        type: "fp",         utc: "2026-12-05T10:30:00Z" },
+      { label: "Qualifying", type: "qualifying", utc: "2026-12-05T14:00:00Z" },
+      { label: "Race",       type: "race",       utc: "2026-12-06T13:00:00Z" },
+    ]
+  },
+];
+
+const TZ = "America/Anchorage";
+
+const dayFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: TZ, weekday: "short", month: "short", day: "numeric"
+});
+
+const timeFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: TZ, hour: "numeric", minute: "2-digit", hour12: true
+});
+
+function formatTime(utcStr) {
+  const d = new Date(utcStr);
+  return timeFmt.format(d);
+}
+
+function formatDay(utcStr) {
+  const d = new Date(utcStr);
+  return dayFmt.format(d);
+}
+
+function isPast(utcStr) {
+  return new Date(utcStr) < new Date();
+}
+
+function raceWeekDates(race) {
+  const all = race.sessions.map(s => new Date(s.utc));
+  const first = all[0], last = all[all.length - 1];
+  const opts = { timeZone: TZ, month: "short", day: "numeric" };
+  const startFmt = new Intl.DateTimeFormat("en-US", opts);
+  const endFmt = new Intl.DateTimeFormat("en-US", { ...opts, year: "numeric" });
+  return `${startFmt.format(first)} – ${endFmt.format(last)}`;
+}
+
+function findNextSession() {
+  const now = new Date();
+  for (const race of races) {
+    for (const s of race.sessions) {
+      if (new Date(s.utc) > now) {
+        return { race, session: s };
+      }
+    }
+  }
+  return null;
+}
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "now";
+  const total = Math.floor(ms / 1000);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (d > 0) return `${d}d ${pad(h)}h ${pad(m)}m`;
+  if (h > 0) return `${h}h ${pad(m)}m ${pad(s)}s`;
+  return `${m}m ${pad(s)}s`;
+}
+
+// Verdicts are saved in this browser, keyed by circuit so they carry over to next season
+const VERDICTS = {
+  must:  { text: "Must watch", badge: "Must watch" },
+  meh:   { text: "Meh",        badge: "Meh" },
+  sleep: { text: "Sleep in",   badge: "Sleep in" },
+};
+const VERDICT_KEY = "f1-verdicts";
+
+function loadVerdicts() {
+  try { return JSON.parse(localStorage.getItem(VERDICT_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function saveVerdicts(v) {
+  try { localStorage.setItem(VERDICT_KEY, JSON.stringify(v)); } catch {}
+}
+
+function renderRaces() {
+  const container = document.getElementById("races");
+  const verdicts = loadVerdicts();
+  const now = new Date();
+
+  // Find first race that hasn't fully finished
+  let firstActiveIdx = -1;
+  for (let i = 0; i < races.length; i++) {
+    const lastSession = races[i].sessions[races[i].sessions.length - 1];
+    if (new Date(lastSession.utc) > now) {
+      firstActiveIdx = i;
+      break;
+    }
+  }
+
+  races.forEach((race, raceIdx) => {
+    const card = document.createElement("div");
+    card.className = "race-card";
+    const isNext = raceIdx === firstActiveIdx;
+    if (isNext) card.classList.add("next-race", "open");
+
+    const badges = [];
+    if (isNext) badges.push(`<span class="badge badge-next">Next</span>`);
+    const verdictBadge = () => {
+      const v = verdicts[race.circuit];
+      return v ? `<span class="badge badge-${v}">${VERDICTS[v].badge}</span>` : "";
+    };
+    if (race.street) badges.push(`<span class="badge badge-street">Street</span>`);
+    if (race.sprint) badges.push(`<span class="badge badge-sprint">Sprint</span>`);
+
+    const sessionsHTML = race.sessions.map(s => {
+      const past = isPast(s.utc);
+      const isNextSession = findNextSession()?.session?.utc === s.utc;
+      const dot = isNextSession ? `<span class="next-session-indicator"></span>` : "";
+      return `
+        <div class="session ${s.type}${past ? " past" : ""}">
+          <span class="session-label">${dot}${s.label}</span>
+          <div class="session-time">
+            <div class="time-main">${formatTime(s.utc)}</div>
+            <div class="time-day">${formatDay(s.utc)}</div>
+          </div>
+        </div>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="race-header">
+        <div class="race-title">
+          <div class="race-name">${race.name}</div>
+          <div class="race-meta">${race.circuit} · ${raceWeekDates(race)}</div>
+          <div class="podium" data-race-round="${race.round}"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="race-badges">${badges.join("")}<span class="verdict-badge">${verdictBadge()}</span></div>
+          <span class="chevron">⌄</span>
+        </div>
+      </div>
+      <div class="sessions">
+        <div class="verdict">
+          ${Object.entries(VERDICTS).map(([k, v]) =>
+            `<button data-v="${k}">${v.text}</button>`).join("")}
+        </div>
+        <div class="podium sprint-podium" data-sprint-round="${race.round}"></div>
+        ${sessionsHTML}
+      </div>`;
+
+    const refreshVerdict = () => {
+      const v = verdicts[race.circuit];
+      card.classList.remove("v-must", "v-meh", "v-sleep");
+      if (v) card.classList.add("v-" + v);
+      card.querySelector(".verdict-badge").innerHTML = verdictBadge();
+      card.querySelectorAll(".verdict button").forEach(b =>
+        b.classList.toggle("active", b.dataset.v === v));
+    };
+    card.querySelectorAll(".verdict button").forEach(b => {
+      b.addEventListener("click", () => {
+        // Tapping the active verdict clears it
+        if (verdicts[race.circuit] === b.dataset.v) delete verdicts[race.circuit];
+        else verdicts[race.circuit] = b.dataset.v;
+        saveVerdicts(verdicts);
+        refreshVerdict();
+      });
+    });
+    refreshVerdict();
+
+    card.querySelector(".race-header").addEventListener("click", () => {
+      card.classList.toggle("open");
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function updateCountdown() {
+  const next = findNextSession();
+  const bar = document.getElementById("countdown-bar");
+  if (!next) {
+    bar.textContent = "Season complete";
+    return;
+  }
+  const ms = new Date(next.session.utc) - new Date();
+  bar.innerHTML = `Next: <span class="session-name">${next.session.label}</span> · <strong>${next.race.name.replace(" Grand Prix", " GP")}</strong> in <strong>${formatCountdown(ms)}</strong>`;
+}
+
+// ---- Results & standings ----
+// Live from the Jolpica F1 API. If that fails we use the last data saved in this
+// browser, and failing that the embedded snapshot below (refresh it by hand).
+const API = "https://api.jolpi.ca/ergast/f1/2026";
+const DATA_KEY = "f1-data-v1";
+const FALLBACK = {"round":17,"drivers":[{"pos":1,"code":"ANT","name":"Antonelli","team":"mercedes","teamName":"Mercedes","pts":340.0,"wins":8},{"pos":2,"code":"RUS","name":"Russell","team":"mercedes","teamName":"Mercedes","pts":238.0,"wins":3},{"pos":3,"code":"HAM","name":"Hamilton","team":"ferrari","teamName":"Ferrari","pts":229.0,"wins":1},{"pos":4,"code":"VER","name":"Verstappen","team":"red_bull","teamName":"Red Bull","pts":221.0,"wins":2},{"pos":5,"code":"LEC","name":"Leclerc","team":"ferrari","teamName":"Ferrari","pts":215.0,"wins":1},{"pos":6,"code":"NOR","name":"Norris","team":"mclaren","teamName":"McLaren","pts":201.0,"wins":2},{"pos":7,"code":"PIA","name":"Piastri","team":"mclaren","teamName":"McLaren","pts":138.0,"wins":0},{"pos":8,"code":"HAD","name":"Hadjar","team":"red_bull","teamName":"Red Bull","pts":97.0,"wins":0},{"pos":9,"code":"LAW","name":"Lawson","team":"rb","teamName":"RB F1 Team","pts":75.0,"wins":0},{"pos":10,"code":"GAS","name":"Gasly","team":"alpine","teamName":"Alpine F1 Team","pts":41.0,"wins":0},{"pos":11,"code":"LIN","name":"Lindblad","team":"rb","teamName":"RB F1 Team","pts":38.0,"wins":0},{"pos":12,"code":"COL","name":"Colapinto","team":"alpine","teamName":"Alpine F1 Team","pts":27.0,"wins":0},{"pos":13,"code":"BEA","name":"Bearman","team":"haas","teamName":"Haas F1 Team","pts":23.0,"wins":0},{"pos":14,"code":"HUL","name":"H\u00fclkenberg","team":"audi","teamName":"Audi","pts":13.0,"wins":0},{"pos":15,"code":"BOR","name":"Bortoleto","team":"audi","teamName":"Audi","pts":10.0,"wins":0},{"pos":16,"code":"OCO","name":"Ocon","team":"haas","teamName":"Haas F1 Team","pts":7.0,"wins":0},{"pos":17,"code":"ALO","name":"Alonso","team":"aston_martin","teamName":"Aston Martin","pts":7.0,"wins":0},{"pos":18,"code":"SAI","name":"Sainz","team":"williams","teamName":"Williams","pts":7.0,"wins":0},{"pos":19,"code":"ALB","name":"Albon","team":"williams","teamName":"Williams","pts":5.0,"wins":0},{"pos":20,"code":"TSU","name":"Tsunoda","team":"rb","teamName":"RB F1 Team","pts":1.0,"wins":0},{"pos":21,"code":"STR","name":"Stroll","team":"aston_martin","teamName":"Aston Martin","pts":0.0,"wins":0},{"pos":22,"code":"BOT","name":"Bottas","team":"cadillac","teamName":"Cadillac F1 Team","pts":0.0,"wins":0},{"pos":23,"code":"PER","name":"P\u00e9rez","team":"cadillac","teamName":"Cadillac F1 Team","pts":0.0,"wins":0}],"constructors":[{"pos":1,"id":"mercedes","name":"Mercedes","pts":578.0,"wins":11},{"pos":2,"id":"ferrari","name":"Ferrari","pts":444.0,"wins":2},{"pos":3,"id":"mclaren","name":"McLaren","pts":339.0,"wins":2},{"pos":4,"id":"red_bull","name":"Red Bull","pts":332.0,"wins":2},{"pos":5,"id":"rb","name":"RB F1 Team","pts":100.0,"wins":0},{"pos":6,"id":"alpine","name":"Alpine F1 Team","pts":68.0,"wins":0},{"pos":7,"id":"haas","name":"Haas F1 Team","pts":30.0,"wins":0},{"pos":8,"id":"audi","name":"Audi","pts":23.0,"wins":0},{"pos":9,"id":"williams","name":"Williams","pts":12.0,"wins":0},{"pos":10,"id":"aston_martin","name":"Aston Martin","pts":7.0,"wins":0},{"pos":11,"id":"cadillac","name":"Cadillac F1 Team","pts":0.0,"wins":0}],"races":{"1":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"LEC","name":"Leclerc","team":"ferrari"}],"2":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"}],"3":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"PIA","name":"Piastri","team":"mclaren"},{"code":"LEC","name":"Leclerc","team":"ferrari"}],"4":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"NOR","name":"Norris","team":"mclaren"},{"code":"PIA","name":"Piastri","team":"mclaren"}],"5":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"},{"code":"VER","name":"Verstappen","team":"red_bull"}],"6":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"},{"code":"HAD","name":"Hadjar","team":"red_bull"}],"7":[{"code":"HAM","name":"Hamilton","team":"ferrari"},{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"NOR","name":"Norris","team":"mclaren"}],"8":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"ANT","name":"Antonelli","team":"mercedes"}],"9":[{"code":"LEC","name":"Leclerc","team":"ferrari"},{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"}],"10":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"LEC","name":"Leclerc","team":"ferrari"},{"code":"VER","name":"Verstappen","team":"red_bull"}],"11":[{"code":"NOR","name":"Norris","team":"mclaren"},{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"ANT","name":"Antonelli","team":"mercedes"}],"12":[{"code":"NOR","name":"Norris","team":"mclaren"},{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"RUS","name":"Russell","team":"mercedes"}],"13":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"VER","name":"Verstappen","team":"red_bull"}],"14":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"NOR","name":"Norris","team":"mclaren"}],"15":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"HAD","name":"Hadjar","team":"red_bull"}],"16":[{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"}],"17":[{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"LEC","name":"Leclerc","team":"ferrari"},{"code":"ANT","name":"Antonelli","team":"mercedes"}]},"sprints":{"2":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"LEC","name":"Leclerc","team":"ferrari"},{"code":"HAM","name":"Hamilton","team":"ferrari"}],"4":[{"code":"NOR","name":"Norris","team":"mclaren"},{"code":"PIA","name":"Piastri","team":"mclaren"},{"code":"LEC","name":"Leclerc","team":"ferrari"}],"5":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"NOR","name":"Norris","team":"mclaren"},{"code":"ANT","name":"Antonelli","team":"mercedes"}],"9":[{"code":"ANT","name":"Antonelli","team":"mercedes"},{"code":"HAM","name":"Hamilton","team":"ferrari"},{"code":"NOR","name":"Norris","team":"mclaren"}],"12":[{"code":"RUS","name":"Russell","team":"mercedes"},{"code":"LEC","name":"Leclerc","team":"ferrari"},{"code":"NOR","name":"Norris","team":"mclaren"}],"17":[{"code":"VER","name":"Verstappen","team":"red_bull"},{"code":"HAM","name":"Hamilton","team":"ferrari"},{"code":"LEC","name":"Leclerc","team":"ferrari"}]}};
+
+const TEAM_COLORS = {
+  mercedes: "#27f4d2", ferrari: "#e8002d", mclaren: "#ff8000", red_bull: "#3671c6",
+  rb: "#6692ff", alpine: "#ff87bc", aston_martin: "#229971", williams: "#64c4ff",
+  haas: "#b6babd", audi: "#c40d2e", cadillac: "#d4af37",
+};
+const teamColor = id => TEAM_COLORS[id] || "#888";
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+let data = JSON.parse(JSON.stringify(FALLBACK));
+let dataSource = "snapshot";
+let showAllDrivers = false;
+
+function loadCache() {
+  try { return JSON.parse(localStorage.getItem(DATA_KEY)); } catch { return null; }
+}
+
+function saveCache() {
+  try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch {}
+}
+
+function mergeData(src) {
+  if (!src || !src.drivers) return;
+  if (src.round >= data.round) {
+    data.round = src.round;
+    data.drivers = src.drivers;
+    data.constructors = src.constructors;
+  }
+  Object.assign(data.races, src.races);
+  Object.assign(data.sprints, src.sprints);
+}
+
+async function getJSON(path) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(`${API}/${path}`, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return (await r.json()).MRData;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const podiumOf = rows => rows.slice(0, 3).map(r => ({
+  code: r.Driver.code, name: r.Driver.familyName, team: r.Constructor.constructorId,
+}));
+
+async function refreshData() {
+  try {
+    const [d, c] = await Promise.all([
+      getJSON("driverstandings.json"), getJSON("constructorstandings.json"),
+    ]);
+    const dl = d.StandingsTable.StandingsLists[0];
+    const cl = c.StandingsTable.StandingsLists[0];
+    if (!dl || !cl) throw new Error("no standings yet");
+    data.round = +dl.round;
+    data.drivers = dl.DriverStandings.map(x => ({
+      pos: +x.position, code: x.Driver.code, name: x.Driver.familyName,
+      team: x.Constructors[0].constructorId, teamName: x.Constructors[0].name,
+      pts: +x.points, wins: +x.wins,
+    }));
+    data.constructors = cl.ConstructorStandings.map(x => ({
+      pos: +x.position, id: x.Constructor.constructorId, name: x.Constructor.name,
+      pts: +x.points, wins: +x.wins,
+    }));
+
+    // Race and sprint podiums for anything that has started and isn't saved yet
+    const now = new Date();
+    const jobs = [];
+    for (const race of races) {
+      const raceS = race.sessions.find(s => s.type === "race");
+      const sprintS = race.sessions.find(s => s.type === "sprint");
+      if (new Date(raceS.utc) < now && !data.races[race.round]) {
+        jobs.push(getJSON(`${race.round}/results.json`).then(m => {
+          const r = m.RaceTable.Races[0];
+          if (r) data.races[race.round] = podiumOf(r.Results);
+        }));
+      }
+      if (sprintS && new Date(sprintS.utc) < now && !data.sprints[race.round]) {
+        jobs.push(getJSON(`${race.round}/sprint.json`).then(m => {
+          const r = m.RaceTable.Races[0];
+          if (r) data.sprints[race.round] = podiumOf(r.SprintResults);
+        }));
+      }
+    }
+    await Promise.allSettled(jobs);
+    dataSource = "live";
+    saveCache();
+  } catch (e) {
+    dataSource = "offline";
+  }
+  renderStandings();
+  renderPodiums();
+}
+
+function renderStandings() {
+  const el = document.getElementById("standings");
+  const dLead = data.drivers[0]?.pts ?? 0;
+  const cLead = data.constructors[0]?.pts ?? 0;
+  const gap = (lead, pts) => pts === lead ? "—" : `-${lead - pts}`;
+  const status = dataSource === "live" ? "live"
+    : dataSource === "offline" ? "offline · last known data" : "loading…";
+
+  const shown = showAllDrivers ? data.drivers : data.drivers.slice(0, 10);
+  const driverRows = shown.map(x => `
+    <tr class="${x.pos === 1 ? "leader" : ""}">
+      <td>${x.pos}</td>
+      <td><span class="team-bar" style="background:${teamColor(x.team)}"></span>${esc(x.name)}<span class="driver-code">${esc(x.code)}</span></td>
+      <td class="team">${esc(x.teamName)}</td>
+      <td class="pts">${x.pts}</td>
+      <td class="gap">${gap(dLead, x.pts)}</td>
+      <td>${x.wins}</td>
+    </tr>`).join("");
+
+  const teamRows = data.constructors.map(x => `
+    <tr class="${x.pos === 1 ? "leader" : ""}">
+      <td>${x.pos}</td>
+      <td><span class="team-bar" style="background:${teamColor(x.id)}"></span>${esc(x.name)}</td>
+      <td class="pts">${x.pts}</td>
+      <td class="gap">${gap(cLead, x.pts)}</td>
+      <td>${x.wins}</td>
+    </tr>`).join("");
+
+  const more = data.drivers.length > 10
+    ? `<button class="st-more" id="st-more">${showAllDrivers ? "Show top 10" : `Show all ${data.drivers.length}`}</button>` : "";
+
+  el.innerHTML = `
+    <div class="standings-grid">
+      <div class="st-panel">
+        <div class="st-head"><span class="st-title">Drivers</span><span class="st-sub">After round ${data.round} · ${status}</span></div>
+        <table class="st"><thead><tr><th>#</th><th>Driver</th><th class="team">Team</th><th>Pts</th><th>Gap</th><th>Wins</th></tr></thead><tbody>${driverRows}</tbody></table>
+        ${more}
+      </div>
+      <div class="st-panel">
+        <div class="st-head"><span class="st-title">Constructors</span><span class="st-sub">After round ${data.round}</span></div>
+        <table class="st"><thead><tr><th>#</th><th>Team</th><th>Pts</th><th>Gap</th><th>Wins</th></tr></thead><tbody>${teamRows}</tbody></table>
+      </div>
+    </div>`;
+
+  const btn = document.getElementById("st-more");
+  if (btn) btn.addEventListener("click", () => { showAllDrivers = !showAllDrivers; renderStandings(); });
+}
+
+function podiumHTML(list) {
+  return list.map((p, i) =>
+    `<span><span class="p-pos">${i + 1}</span><span class="team-bar" style="background:${teamColor(p.team)}"></span>${esc(p.name)}</span>`
+  ).join("");
+}
+
+function renderPodiums() {
+  document.querySelectorAll("[data-race-round]").forEach(el => {
+    const p = data.races[el.dataset.raceRound];
+    el.innerHTML = p ? `<span class="p-label">Race</span>${podiumHTML(p)}` : "";
+  });
+  document.querySelectorAll("[data-sprint-round]").forEach(el => {
+    const p = data.sprints[el.dataset.sprintRound];
+    el.innerHTML = p ? `<span class="p-label">Sprint</span>${podiumHTML(p)}` : "";
+  });
+}
+
+mergeData(loadCache());
+renderStandings();
+renderRaces();
+renderPodiums();
+updateCountdown();
+setInterval(updateCountdown, 1000);
+refreshData();
+setInterval(refreshData, 10 * 60 * 1000);
+</script>
+</body>
+</html>

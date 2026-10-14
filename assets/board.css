@@ -1,0 +1,143 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.board {
+  display: flex;
+  gap: 3px;
+  padding: 8px 10px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.9),
+              inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.tile {
+  position: relative;
+  width: 28px;
+  height: 38px;
+  perspective: 400px;
+}
+
+.tile.narrow { width: 16px; }
+
+/* ── Shared font ── */
+.tile * {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f0f0f0;
+  line-height: 1;
+}
+
+/* ── Static card behind everything ── */
+.tile-static {
+  position: absolute;
+  inset: 0;
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Hinge line */
+.tile-static::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: rgba(0,0,0,0.9);
+  z-index: 2;
+}
+
+/* ── Top static half (current char, upper portion) ── */
+.tile-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: #131313;
+  border: 1px solid #222;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1;
+}
+
+.tile-top span { transform: translateY(50%); }
+
+/* ── Bottom static half (next char, lower portion) ── */
+.tile-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1;
+}
+
+.tile-bottom span { transform: translateY(-50%); }
+
+/* ── Flap wrapper (rotates around bottom edge) ── */
+.tile-flap {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  transform-origin: bottom center;
+  transform-style: preserve-3d;
+  z-index: 3;
+}
+
+/* Front = top half of CURRENT char */
+.tile-flap-front,
+.tile-flap-back {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid #222;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  background: #131313;
+}
+
+/* Back = bottom half of NEXT char */
+.tile-flap-back {
+  background: #0a0a0a;
+  align-items: flex-start;
+  border-radius: 0 0 3px 3px;
+  transform: rotateX(180deg);
+}
+
+.tile-flap-front span { transform: translateY(50%); }
+.tile-flap-back  span { transform: translateY(-50%); }
+
+.tile-static.done span {
+  text-shadow: 0 0 10px rgba(255, 220, 120, 0.25);
+}

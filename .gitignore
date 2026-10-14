@@ -1,0 +1,9 @@
+.DS_Store
+config.php
+node_modules
+# old admin / file-storage app (removed from the public repo; local copies only)
+inc/
+data/
+sites/
+sites.json
+index.php.old

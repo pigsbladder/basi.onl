@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mortgage Affordability Calculator</title>
+    <meta name="robots" content="noindex" />
+    <!-- The classic calculator was retired. Keep any ?query and #hash so shared links still open the calculator. -->
+    <script>
+      var p = new URLSearchParams(window.location.search);
+      var m = p.get('m');
+      if (m === 'price' || m === 'payment') p.set('tab', m);
+      if (p.has('pay')) p.set('tp', p.get('pay'));
+      ['m', 'pay', 'dm', 'dp', 'fe', 'be'].forEach(function (k) { p.delete(k); });
+      var q = p.toString();
+      window.location.replace('/afford/' + (q ? '?' + q : '') + window.location.hash);
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=/afford/" /></noscript>
+  </head>
+  <body>
+    <p>This page moved. <a href="/afford/">Open the calculator</a>.</p>
+  </body>
+</html>
